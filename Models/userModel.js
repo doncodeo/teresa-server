@@ -43,7 +43,7 @@ const userSchema = new mongoose.Schema({
   familyId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Family', // Assuming you have a Family model
-    required: true
+    // required: true
   },
   
 }, {

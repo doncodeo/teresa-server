@@ -223,7 +223,7 @@ const getFamilyMembersLocation = async (req, res) => {
     console.error('Error fetching family members:', error);
     res.status(500).json({ error: 'Server error' });
   }
-};
+}; 
 
 
 // const getFamilyMembersLocation = async (req, res) => {

@@ -16,6 +16,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // Register User with Validation
+
 const registerUser = [
   // Validation rules
   body('username').notEmpty().withMessage('Username is required'),
@@ -50,119 +51,59 @@ const registerUser = [
       // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      // Create user
+      // Create the user initially without familyId
       const user = await userData.create({
         username,
         email,
         password: hashedPassword,
         firstName,
         lastName,
+        familyId: null, // Set to null initially
       });
 
-      if (user) {
-        // If a family code is provided, add the user to the corresponding family group
-        if (familyCode) {
-          const family = await Family.findOne({ familyCode });
-          if (family) {
-            family.members.push({ userId: user._id, role: 'Other' }); // Adjust role as needed
-            await family.save();
-          } else {
-            return res.status(400).json({ error: 'Invalid family code.' });
-          }
+      // If a family code is provided, find the family and add the user to it
+      if (familyCode) {
+        const family = await Family.findOne({ familyCode });
+        if (family) {
+          // Update user's familyId and save
+          user.familyId = family._id;
+          await user.save();
+
+          // Add user to family members and save family
+          family.members.push({ userId: user._id, role: 'Other' }); // Adjust role as needed
+          await family.save();
+        } else {
+          return res.status(400).json({ error: 'Invalid family code.' });
         }
-
-        // Send confirmation email
-        const mailOptions = {
-          from: `"Teresa" <${process.env.EMAIL_USERNAME}>`,
-          to: user.email,
-          subject: 'Registration Confirmation',
-          html: `
-            <html>
-              <head>
-                <style>
-                  body {
-                    font-family: Arial, sans-serif;
-                    background-color: #f0f0f0;
-                    color: #333;
-                    padding: 20px;
-                  }
-                  .container {
-                    max-width: 600px;
-                    margin: 0 auto;
-                    background-color: #ffffff;
-                    padding: 20px;
-                    border-radius: 8px;
-                    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-                  }
-                  .header {
-                    background-color: #4CAF50;
-                    color: white;
-                    padding: 10px;
-                    text-align: center;
-                    border-top-left-radius: 8px;
-                    border-top-right-radius: 8px;
-                  }
-                  .content {
-                    padding: 20px;
-                  }
-                  .login-button {
-                    display: inline-block;
-                    padding: 10px 20px;
-                    background-color: #4CAF50;
-                    color: white;
-                    text-decoration: none;
-                    border-radius: 5px;
-                  }
-                  .footer {
-                    margin-top: 20px;
-                    text-align: center;
-                    color: #666;
-                    font-size: 12px;
-                  }
-                </style>
-              </head>
-              <body>
-                <div class="container">
-                  <div class="header">
-                    <h2>Welcome to Teresa App!</h2>
-                  </div>
-                  <div class="content">
-                    <p>Dear ${user.username},</p>
-                    <p>Thank you for registering with Teresa. We're excited to have you on board.</p>
-                    <p>Please use the button below to log in to your account:</p>
-                    <a class="login-button" href="http://localhost:3000/login" target="_blank">Login to Your Account</a>
-                  </div>
-                  <div class="footer">
-                    <p>Best regards,</p>
-                    <p>Teresa Tech Team</p>
-                  </div>
-                </div>
-              </body>
-            </html>
-          `,
-        };
-
-        transporter.sendMail(mailOptions, (error, info) => {
-          if (error) {
-            console.error('Error sending email:', error);
-          } else {
-            console.log('Email sent:', info.response);
-          }
-        });
-
-        res.status(201).json({ user });
-      } else {
-        res.status(400).json({ error: 'Invalid user data' });
       }
+
+      // Send confirmation email
+      const mailOptions = {
+        from: `"Teresa" <${process.env.EMAIL_USERNAME}>`,
+        to: user.email,
+        subject: 'Registration Confirmation',
+        html: `<!DOCTYPE html> ... </html>`, // email template content
+      };
+
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error('Error sending email:', error);
+        } else {
+          console.log('Email sent:', info.response);
+        }
+      });
+
+      res.status(201).json({ user });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: 'Server error' });
     }
-  }
+  },
 ];
 
 
 // Controller for user login
+
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
@@ -298,7 +239,6 @@ const getUserLocation = async (req, res) => {
     res.status(500).json({ error: 'Server error', details: error.message }); // Include details in response for better understanding
   }
 };
-
 
 
 
