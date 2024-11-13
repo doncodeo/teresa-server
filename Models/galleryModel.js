@@ -9,7 +9,7 @@ const gallerySchema = new mongoose.Schema({
   uploadedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true 
   },
   mediaType: {
     type: String,
