@@ -16,7 +16,9 @@ const {
     removeMember,
     addAdmin,
     removeAdmin,
-    getFamilyMembersLocation
+    getFamilyMembersLocation,
+    addMovieToFamily,
+    getFamilyMovies
 } = require('../Controller/familyController');
 
 /**
@@ -262,6 +264,10 @@ router.route('/:familyId/admins')
  */
 router.route('/:familyId/members/location')
     .get(protect, getFamilyMembersLocation);
+
+router.route('/movie')
+    .post(protect, addMovieToFamily)
+    .get(protect, getFamilyMovies)
 
 module.exports = router;
 

@@ -225,6 +225,56 @@ const getFamilyMembersLocation = async (req, res) => {
   }
 }; 
 
+// Add movie to Family 
+const addMovieToFamily = asyncHandler(async (req, res) => {
+  const { familyCode, title, description, link } = req.body;
+  const userId = req.user._id; // Assumes authentication middleware adds `req.user`
+
+  try {
+    const family = await Family.findOne({ familyCode });
+
+    if (!family) {
+      return res.status(404).json({ error: 'Family not found' });
+    }
+
+    const newMovie = {
+      title,
+      description,
+      link,
+      addedBy: userId,
+    };
+
+    family.movies.push(newMovie);
+    await family.save();
+
+    res.status(201).json({ message: 'Movie added successfully', movie: newMovie });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+const getFamilyMovies = asyncHandler(async (req, res) => {
+  const { familyCode } = req.params;
+
+  try {
+    const family = await Family.findOne({ familyCode }).populate('movies.addedBy', 'username email');
+
+    if (!family) {
+      return res.status(404).json({ error: 'Family not found' });
+    }
+
+    res.status(200).json({ movies: family.movies });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
+
+
+
 
 // const getFamilyMembersLocation = async (req, res) => {
 //   try {
@@ -255,5 +305,7 @@ module.exports = {
   removeMember,
   addAdmin,
   removeAdmin,
-  getFamilyMembersLocation
+  getFamilyMembersLocation,
+  addMovieToFamily,
+  getFamilyMovies,  
 };
