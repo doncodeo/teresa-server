@@ -1,3 +1,6 @@
+const mongoose = require('mongoose');
+const crypto = require('crypto');
+
 const familySchema = new mongoose.Schema({
   name: {
     type: String,

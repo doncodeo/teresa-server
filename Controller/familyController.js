@@ -1,5 +1,7 @@
 const { body, validationResult } = require('express-validator');
 const Family = require('../Models/familyModel');
+const asyncHandler = require ('express-async-handler');
+
 
 // Create a Family Group
 const createFamily = [
