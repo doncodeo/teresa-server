@@ -5,15 +5,7 @@ const { body, validationResult } = require('express-validator');
 const userData = require('../Models/userModel');
 const Family = require('../Models/familyModel');
 const nodemailer = require('nodemailer');
-
-
-const transporter = nodemailer.createTransport({
-  service: 'Gmail',
-  auth: {
-    user: process.env.EMAIL_USERNAME,
-    pass: process.env.EMAIL_PASSWORD
-  }
-});
+const {registrationConfirmation} = require('../Middleware/emailServices');
 
 // Register User with Validation
 
@@ -78,21 +70,8 @@ const registerUser = [
       }
 
       // Send confirmation email
-      const mailOptions = {
-        from: `"Teresa" <${process.env.EMAIL_USERNAME}>`,
-        to: user.email,
-        subject: 'Registration Confirmation',
-        html: `<!DOCTYPE html> ... </html>`, // email template content
-      };
-
-      transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          console.error('Error sending email:', error);
-        } else {
-          console.log('Email sent:', info.response);
-        }
-      });
-
+      await registrationConfirmation(user);
+     
       res.status(201).json({ user });
     } catch (error) {
       console.error(error);
@@ -100,7 +79,6 @@ const registerUser = [
     }
   },
 ];
-
 
 // Controller for user login
 

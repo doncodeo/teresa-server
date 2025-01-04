@@ -8,6 +8,8 @@ const {
 
 const {
     createFamily,
+    joinFamily,
+    leaveFamilyGroup,
     getFamilyById,
     getAllFamilies,
     updateFamily,
@@ -18,7 +20,9 @@ const {
     removeAdmin,
     getFamilyMembersLocation,
     addMovieToFamily,
-    getFamilyMovies
+    getFamilyMovies,
+    updateOwnRole,
+    updateMemberRole
 } = require('../Controller/familyController');
 
 /**
@@ -52,8 +56,13 @@ const {
  *         description: Access denied, admin only
  */
 router.route('/')
-    .post(createFamily)
+    .post(protect, createFamily)
     .get(protect, adminOnly, getAllFamilies);
+
+router.route('/join')
+    .post(protect, joinFamily)
+router.route('/leave/:familyId')
+    .put(protect, leaveFamilyGroup);
 
 /**
  * @swagger
@@ -122,7 +131,7 @@ router.route('/')
  */
 router.route('/:id')
     .get(protect, getFamilyById)
-    .put(protect, isAdmin, updateFamily)
+    .put(protect, updateFamily)
     .delete(protect, isAdmin, deleteFamily);
 
 /**
@@ -269,53 +278,10 @@ router.route('/movie')
     .post(protect, addMovieToFamily)
     .get(protect, getFamilyMovies)
 
+
+router.put('/:familyId/role', protect, updateOwnRole);
+router.put('/:familyId/role-admin', protect, updateMemberRole);
+
+
 module.exports = router;
 
-
-
-
-// const express = require('express');
-// const router = express.Router();
-// const { 
-//     protect,
-//     isAdmin,
-//     adminOnly,
-//     superAdminOnly
-//  } = require('../Middleware/adminMiddleware');
-
-// const {
-//     createFamily,
-//     getFamilyById,
-//     getAllFamilies,
-//     updateFamily,
-//     deleteFamily,
-//     addMember,
-//     removeMember,
-//     addAdmin,
-//     removeAdmin,
-//     getFamilyMembersLocation
-// } = require('../Controller/familyController');
-
-// // Routes for Family CRUD operations
-// router.route('/')
-//     .post(createFamily) // Create a new family group
-//     .get(protect, adminOnly, getAllFamilies); // Get all family groups
-
-// router.route('/:id')
-//     .get(protect, getFamilyById) // Get a family group by ID
-//     .put(protect, isAdmin, updateFamily) // Update a family group
-//     .delete(protect, isAdmin, deleteFamily); // Delete a family group
-
-// // Routes for managing members and admins in a family group
-// router.route('/:familyId/members')
-//     .post(protect, isAdmin, addMember) // Add a member to a family group
-//     .delete(protect, isAdmin, removeMember); // Remove a member from a family group
-
-// router.route('/:familyId/admins')
-//     .post(protect, isAdmin, addAdmin) // Add an admin to a family group
-//     .delete(protect, isAdmin, removeAdmin); // Remove an admin from a family group
-
-// router.route('/:familyId/members/location')
-//     .get(protect, getFamilyMembersLocation)
-
-// module.exports = router;
