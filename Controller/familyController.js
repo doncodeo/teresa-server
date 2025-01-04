@@ -4,6 +4,14 @@ const asyncHandler = require ('express-async-handler');
 const {familyCreationMail, familyWelcomeMail, familyLeaveMail} = require('../Middleware/emailServices');
 const userData = require('../Models/userModel');
 
+const validRoles = [
+  'Father', 'Mother', 'Son', 'Daughter', 
+  'Cousin', 'Uncle', 'Aunt', 
+  'Grandparent', 'Sibling', 'Other'
+];
+
+const validateRole = (role) => validRoles.includes(role);
+
 // Create a Family Group
 
 const createFamily = [
@@ -234,17 +242,12 @@ const getAllFamilies = async (req, res) => {
 // Update a Family Group
 
 const updateFamily = async (req, res) => {
-  console.log('Update family endpoint hit'); // Debugging
   try {
     const { id } = req.params;
-
     const family = await Family.findById(id);
     if (!family) {
-      console.log('Family not found for ID:', id); // Debugging
       return res.status(404).json({ error: 'Family not found' });
     }
-
-    console.log('Found family:', family); // Debugging
 
     const updates = req.body;
     Object.keys(updates).forEach((key) => {
@@ -254,7 +257,6 @@ const updateFamily = async (req, res) => {
     await family.save();
     res.status(200).json({ family });
   } catch (error) {
-    console.error('Error updating family:', error); // Debugging
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -265,13 +267,7 @@ const updateOwnRole = async (req, res) => {
     const { familyId } = req.params; // Retrieve familyId from URL params
     const userId = req.user.id; // Assumes user ID is set by authentication middleware
 
-    // Validate new role
-    const validRoles = [
-      'Father', 'Mother', 'Son', 'Daughter', 
-      'Cousin', 'Uncle', 'Aunt', 
-      'Grandparent', 'Sibling', 'Other'
-    ];
-    if (!validRoles.includes(newRole)) {
+    if (!validateRole(newRole)) {
       return res.status(400).json({ error: 'Invalid role provided.' });
     }
 
@@ -304,13 +300,7 @@ const updateMemberRole = async (req, res) => {
     const { familyId } = req.params;
     const userId = req.user.id; 
 
-    // Validate new role
-    const validRoles = [
-      'Father', 'Mother', 'Son', 'Daughter', 
-      'Cousin', 'Uncle', 'Aunt', 
-      'Grandparent', 'Sibling', 'Other'
-    ];
-    if (!validRoles.includes(newRole)) {
+    if (!validateRole(newRole)) {
       return res.status(400).json({ error: 'Invalid role provided.' });
     }
 
@@ -343,45 +333,18 @@ const updateMemberRole = async (req, res) => {
   }
 };
 
-
-
-// const updateFamily = [
-//   async (req, res) => {
-//     try {
-//       const family = await Family.findById(req.params.id);
-//       if (!family) {
-//         return res.status(404).json({ error: 'Family not found' });
-//       }
-
-//       console.log(family) 
-
-//       const updates = req.body;
-//       Object.keys(updates).forEach(key => {
-//         family[key] = updates[key];
-//       });
-
-//       await family.save();
-//       res.status(200).json({ family });
-//     } catch (error) {
-//       res.status(500).json({ error: 'Server error' });
-//     }
-//   }
-// ];
-
 // Delete a Family Group
-const deleteFamily = [
-  async (req, res) => {
-    try {
-      const family = await Family.findByIdAndDelete(req.params.id);
-      if (!family) {
-        return res.status(404).json({ error: 'Family not found' });
-      }
-      res.status(200).json({ message: 'Family deleted successfully' });
-    } catch (error) {
-      res.status(500).json({ error: 'Server error' });
+const deleteFamily = async (req, res) => {
+  try {
+    const family = await Family.findByIdAndDelete(req.params.id);
+    if (!family) {
+      return res.status(404).json({ error: 'Family not found' });
     }
+    res.status(200).json({ message: 'Family deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
   }
-];
+};
 
 // Add a Member to a Family Group
 const addMember = [
@@ -557,28 +520,6 @@ const getFamilyMovies = asyncHandler(async (req, res) => {
 });
 
 
-
-
-
-
-// const getFamilyMembersLocation = async (req, res) => {
-//   try {
-//     const { familyId } = req.params; // Get the family ID from the request parameters
-
-//     // Fetch all users that belong to the specified family
-//     const familyMembers = await Family.find({ familyId }).select('firstName lastName location');
-
-//     if (!familyMembers.length) {
-//       return res.status(404).json({ message: 'No family members found' });
-//     }
-
-//     // Return the family members with their locations
-//     res.status(200).json({ members: familyMembers });
-//   } catch (error) {
-//     console.error('Error fetching family members:', error);
-//     res.status(500).json({ error: 'Server error' });
-//   }
-// };
  
 module.exports = {
   createFamily,
