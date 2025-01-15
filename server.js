@@ -24,7 +24,9 @@ connectDb()
       'https://teresa-server-f6a6f6000e18.herokuapp.com/'
     ]; 
 
-    app.use(cors({ origin: allowedOrigins }));
+    // app.use(cors({ origin: allowedOrigins }));
+    app.use(cors());
+
 
     // Middleware for JSON and URL-encoded data
     app.use(express.json());
