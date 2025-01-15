@@ -14,6 +14,8 @@ const validateRole = (role) => validRoles.includes(role);
 
 // Create a Family Group
 
+
+
 const createFamily = [
   body('name').notEmpty().withMessage('Family name is required'),
   body('description').notEmpty().withMessage('Family description is required'),
@@ -57,7 +59,6 @@ const createFamily = [
     }
   },
 ];
-
 
 const joinFamily = async (req, res) => {
   try {
@@ -111,6 +112,7 @@ const joinFamily = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
 
 const leaveFamilyGroup = async (req, res) => {
   try {

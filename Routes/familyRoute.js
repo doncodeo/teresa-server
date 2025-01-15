@@ -66,36 +66,12 @@ router.route('/leave/:familyId')
 
 /**
  * @swagger
- * /api/families/{id}:
- *   get:
- *     summary: Get a family group by ID
+ * /api/families:
+ *   post:
+ *     summary: Create a new family group
  *     tags: [Families]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ID of the family group
- *     responses:
- *       200:
- *         description: Family group details
- *       404:
- *         description: Family group not found
- *   put:
- *     summary: Update a family group
- *     tags: [Families]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ID of the family group
  *     requestBody:
  *       required: true
  *       content:
@@ -105,30 +81,104 @@ router.route('/leave/:familyId')
  *             properties:
  *               name:
  *                 type: string
- *                 description: Updated name of the family group
+ *                 description: Name of the family group
+ *                 example: "The Smiths"
+ *               description:
+ *                 type: string
+ *                 description: Description of the family group
+ *                 example: "A family group for the Smiths."
  *     responses:
- *       200:
- *         description: Family group updated successfully
- *       404:
- *         description: Family group not found
- *   delete:
- *     summary: Delete a family group
- *     tags: [Families]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ID of the family group
- *     responses:
- *       200:
- *         description: Family group deleted successfully
- *       404:
- *         description: Family group not found
+ *       201:
+ *         description: Family group created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 family:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       description: ID of the created family
+ *                     name:
+ *                       type: string
+ *                       description: Name of the created family
+ *                     description:
+ *                       type: string
+ *                       description: Description of the created family
+ *                     familyCode:
+ *                       type: string
+ *                       description: Unique code for the family
+ *                     joinToken:
+ *                       type: string
+ *                       description: Token for joining the family
+ *                     createdBy:
+ *                       type: string
+ *                       description: ID of the user who created the family
+ *                     admins:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                         description: IDs of the admins
+ *                     members:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           userId:
+ *                             type: string
+ *                             description: User ID of the member
+ *                           role:
+ *                             type: string
+ *                             description: Role of the member
+ *                           example:
+ *                             userId: "63a8c82e1f0b3e12c1234567"
+ *                             role: "Father"
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       description: Timestamp when the family was created
+ *                 message:
+ *                   type: string
+ *                   description: Success message
+ *       400:
+ *         description: Validation error or family name already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 errors:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       msg:
+ *                         type: string
+ *                         description: Validation error message
+ *                       param:
+ *                         type: string
+ *                         description: The field that caused the error
+ *                       location:
+ *                         type: string
+ *                         description: Location of the field (e.g., "body")
+ *                 error:
+ *                   type: string
+ *                   description: Error message for duplicate family name
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   description: Error message
  */
+
+
 router.route('/:id')
     .get(protect, getFamilyById)
     .put(protect, updateFamily)

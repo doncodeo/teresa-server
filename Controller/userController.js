@@ -79,7 +79,7 @@ const registerUser = [
     }
   },
 ];
-
+  
 // Controller for user login
 
 const loginUser = asyncHandler(async (req, res) => {
