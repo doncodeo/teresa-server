@@ -21,6 +21,7 @@ connectDb()
   .then(() => {
     const allowedOrigins = [
       'http://localhost:5174',
+      'https://teresa-server-f6a6f6000e18.herokuapp.com/'
     ]; 
 
     app.use(cors({ origin: allowedOrigins }));
