@@ -91,8 +91,8 @@ const loginUser = asyncHandler(async (req, res) => {
   if (user && (await bcrypt.compare(password, user.password))) {
     // Generate JWT token for authentication
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      // expiresIn: '30d', // Token expires in 30 days
-      expiresIn: process.env.JWT_EXPIRATION,
+      expiresIn: '30d', // Token expires in 30 days
+      // expiresIn: process.env.JWT_EXPIRATION,
     });
     res.status(200).json({ user, token });
   } else {

@@ -14,11 +14,11 @@ const swaggerOptions = {
     },
     servers: [
       {
-        // url: "http://localhost:5300", 
-        url: "https://teresa-server-f6a6f6000e18.herokuapp.com"
+        url: "http://localhost:5300",  
+        // url: "https://teresa-server-f6a6f6000e18.herokuapp.com"
       },
     ],
-  },
+  }, 
   apis: ["./Routes/*.js"], // Path to your route files
 };
 
