@@ -31,45 +31,6 @@ const {
  *   post:
  *     summary: Create a new family group
  *     tags: [Families]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *                 description: Name of the family group
- *     responses:
- *       201:
- *         description: Family group created successfully
- *   get:
- *     summary: Get all family groups
- *     tags: [Families]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: List of family groups
- *       403:
- *         description: Access denied, admin only
- */
-router.route('/')
-    .post(protect, createFamily)
-    .get(protect, adminOnly, getAllFamilies);
-
-router.route('/join')
-    .post(protect, joinFamily)
-router.route('/leave/:familyId')
-    .put(protect, leaveFamilyGroup);
-
-/**
- * @swagger
- * /api/families:
- *   post:
- *     summary: Create a new family group
- *     tags: [Families]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -178,6 +139,319 @@ router.route('/leave/:familyId')
  *                   description: Error message
  */
 
+router.route('/')
+    .post(protect, createFamily)
+    .get(protect, adminOnly, getAllFamilies);
+
+/**
+ * @swagger
+ * /api/families/join:
+ *   post:
+ *     summary: Join a family group
+ *     tags: [Families]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: The join token for the family
+ *                 example: 1234abcd5678efgh91011ijklmnopqr
+ *               familyCode:
+ *                 type: string
+ *                 description: The family code for the family
+ *                 example: FAM123ABC
+ *             oneOf:
+ *               - required: ["token"]
+ *               - required: ["familyCode"]
+ *     responses:
+ *       200:
+ *         description: Successfully joined the family group
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Success message
+ *                   example: Successfully joined the family group.
+ *                 family:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       description: Family ID
+ *                     name:
+ *                       type: string
+ *                       description: Family name
+ *                     familyCode:
+ *                       type: string
+ *                       description: Family code
+ *                     joinToken:
+ *                       type: string
+ *                       description: Join token for the family
+ *                     members:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           userId:
+ *                             type: string
+ *                             description: User ID of the member
+ *                           role:
+ *                             type: string
+ *                             description: Role of the user in the family
+ *                             enum: [Father, Mother, Son, Daughter, Cousin, Uncle, Aunt, Grandparent, Sibling, Other]
+ *       400:
+ *         description: Validation error or already a member of the family
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   description: Error message
+ *                   example: Either a join token or a family code must be provided.
+ *       404:
+ *         description: Family or user not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   description: Error message
+ *                   example: Invalid family code.
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   description: Error message
+ *                   example: Server error
+ */
+
+router.route('/join')
+    .post(protect, joinFamily)
+router.route('/leave/:familyId')
+    .put(protect, leaveFamilyGroup);
+
+/**
+ * @swagger
+ * /api/families/{id}:
+ *   get:
+ *     summary: Get family details by ID
+ *     tags: [Families]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the family to fetch
+ *     responses:
+ *       200:
+ *         description: Family details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 family:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       description: Family ID
+ *                     name:
+ *                       type: string
+ *                       description: Family name
+ *                     description:
+ *                       type: string
+ *                       description: Family description
+ *                     familyCode:
+ *                       type: string
+ *                       description: Unique family code
+ *                     joinToken:
+ *                       type: string
+ *                       description: Join token for the family
+ *                     members:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           userId:
+ *                             type: string
+ *                             description: User ID of the member
+ *                           role:
+ *                             type: string
+ *                             description: Role of the user in the family
+ *                             enum: [Father, Mother, Son, Daughter, Cousin, Uncle, Aunt, Grandparent, Sibling, Other]
+ *                     admins:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           userId:
+ *                             type: string
+ *                             description: User ID of the admin
+ *       404:
+ *         description: Family not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   description: Error message
+ *                   example: Family not found
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   description: Error message
+ *                   example: Server error
+ *   put:
+ *     summary: Update family details
+ *     tags: [Families]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the family to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Family name
+ *               description:
+ *                 type: string
+ *                 description: Family description
+ *               members:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: string
+ *                       description: User ID of the member
+ *                     role:
+ *                       type: string
+ *                       description: Role of the user in the family
+ *                       enum: [Father, Mother, Son, Daughter, Cousin, Uncle, Aunt, Grandparent, Sibling, Other]
+ *             example:
+ *               name: New Family Name
+ *               description: Updated description for the family
+ *     responses:
+ *       200:
+ *         description: Family updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 family:
+ *                   type: object
+ *                   description: Updated family details
+ *       404:
+ *         description: Family not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   description: Error message
+ *                   example: Family not found
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   description: Error message
+ *                   example: Server error
+ *   delete:
+ *     summary: Delete a family
+ *     tags: [Families]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the family to delete
+ *     responses:
+ *       200:
+ *         description: Family deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Success message
+ *                   example: Family deleted successfully
+ *       404:
+ *         description: Family not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   description: Error message
+ *                   example: Family not found
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   description: Error message
+ *                   example: Server error
+ */
+
 
 router.route('/:id')
     .get(protect, getFamilyById)
@@ -238,7 +512,7 @@ router.route('/:id')
  *       404:
  *         description: Family group or member not found
  */
-router.route('/:familyId/members')
+router.route('/:familyId/members')  
     .post(protect, isAdmin, addMember)
     .delete(protect, isAdmin, removeMember);
 

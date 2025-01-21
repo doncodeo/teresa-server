@@ -3,13 +3,15 @@ const router = express.Router();
 
 const {
     registerUser,
+    verifyUser,
     loginUser,
     updateUser,
     deleteUser,
     getAllUsers,
     getUserById,
     updateLocation,
-    getUserLocation
+    getUserLocation,
+    resendVerification
 } = require('../Controller/userController');
 const { protect, adminOnly, superAdminOnly, errorHandler } = require('../Middleware/adminMiddleware');
 
@@ -166,6 +168,135 @@ const { protect, adminOnly, superAdminOnly, errorHandler } = require('../Middlew
 
 
 router.route('/').get(getAllUsers).post(registerUser);
+
+/**
+ * @swagger
+ * /api/user/verify:
+ *   post:
+ *     summary: Verify a user's account
+ *     tags: [Users]
+ *     description: Verifies a user's account using a verification code. Marks the account as verified and sends a welcome email upon successful verification.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 description: The ID of the user to verify
+ *                 example: 64d8f9b0c0e87c001234abcd
+ *               verificationCode:
+ *                 type: string
+ *                 description: The verification code sent to the user
+ *                 example: 123456
+ *     responses:
+ *       200:
+ *         description: Account verified successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Success message
+ *                   example: Account verified successfully. Welcome email sent!
+ *       400:
+ *         description: Invalid or expired verification code
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Error message
+ *                   example: Invalid or expired verification code.
+ *       500:
+ *         description: Server error during verification
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Error message
+ *                   example: Server error during verification.
+ */
+
+router.route('/verify').post(verifyUser);
+
+/**
+ * @swagger
+ * /api/user/reverify:
+ *   post:
+ *     summary: Resend verification email
+ *     tags: [Users]
+ *     description: Resends a verification email with a new verification code to a user who is not yet verified.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 description: The email address of the user to resend the verification email to.
+ *                 example: user@example.com
+ *     responses:
+ *       200:
+ *         description: Verification code resent successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Success message.
+ *                   example: Verification code resent successfully. Please check your email.
+ *       400:
+ *         description: User is already verified or other validation error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Error message.
+ *                   example: User is already verified.
+ *       404:
+ *         description: User not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Error message.
+ *                   example: User not found.
+ *       500:
+ *         description: Server error while resending the verification email.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Error message.
+ *                   example: Server error while resending verification code.
+ */
+
+
+router.route('/reverify').post(resendVerification);
+
 
 /**
  * @swagger
