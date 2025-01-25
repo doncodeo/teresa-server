@@ -239,9 +239,6 @@ const resendVerification = async (req, res) => {
     res.status(500).json({ message: 'Server error while resending verification code.' });
   }
 };
-
-
-
   
 // Controller for user login
 
@@ -328,7 +325,6 @@ const getUserById = asyncHandler(async (req, res) => {
   }
 });
 
-
 // Update User Location
 const updateLocation = [
   body('lat').notEmpty().withMessage('Latitude is required'),
@@ -380,7 +376,6 @@ const getUserLocation = async (req, res) => {
     res.status(500).json({ error: 'Server error', details: error.message }); // Include details in response for better understanding
   }
 };
-
 
 
 module.exports = { 

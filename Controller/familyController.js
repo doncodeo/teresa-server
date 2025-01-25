@@ -13,22 +13,19 @@ const validRoles = [
 const validateRole = (role) => validRoles.includes(role);
 
 // Create a Family Group
-
-
-
 const createFamily = [
   body('name').notEmpty().withMessage('Family name is required'),
   body('description').notEmpty().withMessage('Family description is required'),
 
   async (req, res) => {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) { 
+    if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
 
     try {
       const { name, description } = req.body;
-      const createdBy = req.user.id; // Ensure req.user is populated
+      const createdBy = req.user.id; // Ensure `req.user` is populated
 
       // Check if the family name already exists
       const existingFamily = await Family.findOne({ name });
@@ -45,6 +42,14 @@ const createFamily = [
         members: [{ userId: createdBy, role: 'Other' }],
       });
       await family.save();
+
+      // Update the user's familyId
+      const user = await User.findById(createdBy);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found.' });
+      }
+      user.familyId = family._id;
+      await user.save();
 
       // Generate a join link
       const joinLink = `${process.env.FRONTEND_URL}/join-family/${family.joinToken}`;
@@ -91,7 +96,7 @@ const joinFamily = async (req, res) => {
     }
 
     // Fetch user details
-    const user = await userData.findById(userId);
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
     }
@@ -100,9 +105,13 @@ const joinFamily = async (req, res) => {
     family.members.push({ userId, role: 'Other' }); // Adjust role as needed
     await family.save();
 
+    // Update the user's familyId
+    user.familyId = family._id;
+    await user.save();
+
     // Generate the family group link
     const familyLink = `${process.env.FRONTEND_URL}/family/${family._id}`;
-  
+
     // Send welcome email
     await familyWelcomeMail(user, family, familyLink);
 
@@ -112,6 +121,109 @@ const joinFamily = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+
+// const createFamily = [
+//   body('name').notEmpty().withMessage('Family name is required'),
+//   body('description').notEmpty().withMessage('Family description is required'),
+
+//   async (req, res) => {
+//     const errors = validationResult(req);
+//     if (!errors.isEmpty()) { 
+//       return res.status(400).json({ errors: errors.array() });
+//     }
+
+//     try {
+//       const { name, description } = req.body;
+//       const createdBy = req.user.id; // Ensure req.user is populated
+
+//       // Check if the family name already exists
+//       const existingFamily = await Family.findOne({ name });
+//       if (existingFamily) {
+//         return res.status(400).json({ error: 'Family name already exists' });
+//       }
+
+//       // Create the family and add the creator as an admin
+//       const family = new Family({
+//         name,
+//         description,
+//         createdBy,
+//         admins: [createdBy],
+//         members: [{ userId: createdBy, role: 'Other' }],
+//       });
+//       await family.save();
+
+//       // Generate a join link
+//       const joinLink = `${process.env.FRONTEND_URL}/join-family/${family.joinToken}`;
+
+//       // Send the email with the join link
+//       await familyWelcomeMail(req.user, family, joinLink);
+
+//       res.status(201).json({ family, message: 'Family created successfully and email sent.' });
+//     } catch (error) {
+//       console.error('Error creating family:', error);
+//       res.status(500).json({ error: 'Server error' });
+//     }
+//   },
+// ];
+
+
+
+
+
+
+// const joinFamily = async (req, res) => {
+//   try {
+//     const { token, familyCode } = req.body; // Accept both token and familyCode
+//     const userId = req.user.id; // User attempting to join
+
+//     if (!token && !familyCode) {
+//       return res.status(400).json({ error: 'Either a join token or a family code must be provided.' });
+//     }
+
+//     let family;
+
+//     // Find the family by the provided token or family code
+//     if (token) {
+//       family = await Family.findOne({ joinToken: token });
+//       if (!family) {
+//         return res.status(404).json({ error: 'Invalid or expired join link.' });
+//       }
+//     } else if (familyCode) {
+//       family = await Family.findOne({ familyCode });
+//       if (!family) {
+//         return res.status(404).json({ error: 'Invalid family code.' });
+//       }
+//     }
+
+//     // Check if the user is already a member of the family
+//     const isMember = family.members.some((member) => member.userId.toString() === userId);
+//     if (isMember) {
+//       return res.status(400).json({ error: 'User is already a member of this family.' });
+//     }
+
+//     // Fetch user details
+//     const user = await userData.findById(userId);
+//     if (!user) {
+//       return res.status(404).json({ error: 'User not found.' });
+//     }
+
+//     // Add the user to the family
+//     family.members.push({ userId, role: 'Other' }); // Adjust role as needed
+//     await family.save();
+
+//     // Generate the family group link
+//     const familyLink = `${process.env.FRONTEND_URL}/family/${family._id}`;
+  
+//     // Send welcome email
+//     await familyWelcomeMail(user, family, familyLink);
+
+//     res.status(200).json({ message: 'Successfully joined the family group.', family });
+//   } catch (error) {
+//     console.error('Error joining family:', error);
+//     res.status(500).json({ error: 'Server error' });
+//   }
+// };
 
 
 const leaveFamilyGroup = async (req, res) => {
