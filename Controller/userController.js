@@ -309,14 +309,18 @@ const deleteUser = asyncHandler(async (req, res) => {
 
 // Controller for getting all users
 const getAllUsers = asyncHandler(async (req, res) => {
-  const users = await userData.find();
+  const users = await userData.find().populate('familyId', 'name description'); // Populate family details
   res.status(200).json({ users });
 });
+
 
 // Controller for getting a particular user by id
 const getUserById = asyncHandler(async (req, res) => {
   const userId = req.params.id;
-  const user = await userData.findById(userId);
+
+  const user = await userData
+    .findById(userId)
+    .populate('familyId', 'name description createdBy'); // Populate family details
 
   if (user) {
     res.status(200).json({ user });
@@ -324,6 +328,7 @@ const getUserById = asyncHandler(async (req, res) => {
     res.status(404).json({ error: 'User not found' });
   }
 });
+
 
 // Update User Location
 const updateLocation = [
