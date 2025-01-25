@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect, isAdmin } = require('../Middleware/adminMiddleware');
+const { protect, isAdmin, adminOnly, superAdminOnly } = require('../Middleware/adminMiddleware');
 
 const {
     createMessage,
@@ -134,12 +134,11 @@ router.route('/:familyId')
  *         description: Message not found
  */
 router.route('/:messageId')
-    .get(protect, getMessageById)
     .put(protect, updateMessage)
-    .delete(protect, isAdmin, deleteMessage);
+    .delete(protect, deleteMessage);
 
 /**
- * @swagger
+ * @swagger 
  * /api/message/{messageId}/like:
  *   post:
  *     summary: Like a message
@@ -252,54 +251,3 @@ router.route('/:messageId/comments/:commentId')
 
 module.exports = router;
 
-
-
-
-
-
-
-
-// const express = require('express');
-// const router = express.Router();
-// const { protect, isAdmin } = require('../Middleware/adminMiddleware');
-
-// const {
-//     createMessage,
-//     getMessagesByFamilyId,
-//     getMessageById,
-//     updateMessage,
-//     deleteMessage,
-//     likeMessage,
-//     unlikeMessage,
-//     addComment,
-//     removeComment
-// } = require('../Controller/messageController');
-
-// // Routes for creating and retrieving messages
-// router.route('/')
-//     .post(protect, createMessage); // Create a new message 
-
-// router.route('/:familyId')
-//     .get(protect, getMessagesByFamilyId); // Get all messages for a family
-
-// // Routes for specific message operations
-// router.route('/:messageId')
-//     .get(protect, getMessageById) // Get a specific message by ID
-//     .put(protect, updateMessage) // Update a message
-//     .delete(protect, isAdmin, deleteMessage); // Delete a message
-
-// // Routes for liking and unliking messages
-// router.route('/:messageId/like')
-//     .post(protect, likeMessage); // Like a message
-
-// router.route('/:messageId/unlike')
-//     .post(protect, unlikeMessage); // Unlike a message
-
-// // Routes for adding and removing comments on messages
-// router.route('/:messageId/comments')
-//     .post(protect, addComment); // Add a comment to a message
-
-// router.route('/:messageId/comments/:commentId')
-//     .delete(protect, removeComment); // Remove a comment from a message
-
-// module.exports = router;

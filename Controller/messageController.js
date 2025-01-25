@@ -110,22 +110,6 @@ const getMessagesByFamilyId = async (req, res) => {
   }
 };
 
-// Get a specific message by ID
-const getMessageById = async (req, res) => {
-  try {
-    const { messageId } = req.params;
-
-    const message = await Message.findById(messageId).populate('sender', 'username email').populate('comments.user', 'username email');
-    if (!message) {
-      return res.status(404).json({ error: 'Message not found' });
-    }
-
-    res.status(200).json({ message });
-  } catch (error) {
-    res.status(500).json({ error: 'Server error' });
-  }
-};
-
 // Update a message
 const updateMessage = async (req, res) => {
   try {
@@ -157,22 +141,34 @@ const deleteMessage = async (req, res) => {
     const { messageId } = req.params;
     const userId = req.user._id;
 
+    // Find the message by ID
     const message = await Message.findById(messageId);
     if (!message) {
       return res.status(404).json({ error: 'Message not found' });
     }
 
-    // Check if the user is an admin or the owner of the message
-    const family = await Family.findById(message.familyId);
-    const isAdmin = family.admins.includes(userId);
+    // Ensure the message has a valid familyId
+    if (!message.familyId) {
+      return res.status(400).json({ error: 'Message is not associated with any family' });
+    }
 
+    // Find the family associated with the message
+    const family = await Family.findById(message.familyId);
+    if (!family) {
+      return res.status(404).json({ error: 'Family does not exist' });
+    }
+
+    // Check if the user is an admin or the owner of the message
+    const isAdmin = family.admins.includes(userId);
     if (message.sender.toString() !== userId.toString() && !isAdmin) {
       return res.status(403).json({ error: 'You can only delete your own messages or be an admin' });
     }
 
-    await message.remove();
-    res.status(200).json({ message });
+    // Delete the message
+    await Message.deleteOne({ _id: messageId }); // Use deleteOne instead of remove
+    res.status(200).json({ message: 'Message deleted successfully' });
   } catch (error) {
+    console.error('Error deleting message:', error); // Log the error for debugging
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -284,7 +280,6 @@ const removeComment = async (req, res) => {
 module.exports = {
   createMessage,
   getMessagesByFamilyId,
-  getMessageById,
   updateMessage,
   deleteMessage,
   likeMessage,
