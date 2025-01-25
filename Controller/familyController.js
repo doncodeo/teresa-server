@@ -44,7 +44,7 @@ const createFamily = [
       await family.save();
 
       // Update the user's familyId
-      const user = await User.findById(createdBy);
+      const user = await userData.findById(createdBy);
       if (!user) {
         return res.status(404).json({ error: 'User not found.' });
       }
@@ -96,7 +96,7 @@ const joinFamily = async (req, res) => {
     }
 
     // Fetch user details
-    const user = await User.findById(userId);
+    const user = await userData.findById(userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
     }
@@ -120,7 +120,7 @@ const joinFamily = async (req, res) => {
     console.error('Error joining family:', error);
     res.status(500).json({ error: 'Server error' });
   }
-};
+}; 
 
 
 // const createFamily = [
