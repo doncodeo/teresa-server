@@ -49,7 +49,7 @@ const registerUser = [
       const hashedPassword = await bcrypt.hash(password, 10);
 
       // Generate verification details
-      const verificationCode = crypto.randomBytes(3).toString('hex').toUpperCase();
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit code
       const verificationCodeExpiration = Date.now() + 30 * 60 * 1000; // 30 minutes
 
       // Create the user (familyId is null for now)
@@ -95,6 +95,86 @@ const registerUser = [
   },
 ];
 
+// const registerUser = [
+//   // Validation middleware
+//   body('username').notEmpty().withMessage('Username is required'),
+//   body('email').isEmail().withMessage('Invalid email'),
+//   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+//   body('firstName').notEmpty().withMessage('First name is required'),
+//   body('lastName').notEmpty().withMessage('Last name is required'),
+//   body('familyCode').optional().isString().withMessage('Family code must be a string'),
+
+//   // Controller logic
+//   async (req, res) => {
+//     const errors = validationResult(req);
+//     if (!errors.isEmpty()) {
+//       return res.status(400).json({ errors: errors.array() });
+//     }
+
+//     try {
+//       const { username, email, password, firstName, lastName, familyCode } = req.body;
+
+//       // Check if the user already exists
+//       const existingEmail = await userData.findOne({ email });
+//       const existingUsername = await userData.findOne({ username });
+
+//       if (existingEmail) {
+//         return res.status(400).json({ message: 'User already exists with this email.' });
+//       }
+
+//       if (existingUsername) {
+//         return res.status(400).json({ message: 'User already exists with this username.' });
+//       }
+
+//       // Hash the password
+//       const hashedPassword = await bcrypt.hash(password, 10);
+
+//       // Generate verification details
+//       const verificationCode = crypto.randomBytes(3).toString('hex').toUpperCase();
+//       const verificationCodeExpiration = Date.now() + 30 * 60 * 1000; // 30 minutes
+
+//       // Create the user (familyId is null for now)
+//       const newUser = await userData.create({
+//         username,
+//         email,
+//         password: hashedPassword,
+//         firstName,
+//         lastName,
+//         isVerified: false,
+//         verificationCode,
+//         verificationCodeExpiration,
+//         familyId: null, // Will be updated if familyCode is valid
+//       });
+
+//       // If a familyCode is provided, validate it and add the user to the family
+//       if (familyCode) {
+//         const family = await Family.findOne({ familyCode });
+//         if (!family) {
+//           return res.status(400).json({ message: 'Invalid family code.' });
+//         }
+
+//         // Assign user to the family
+//         newUser.familyId = family._id;
+//         await newUser.save();
+
+//         // Add user to the family members
+//         family.members.push({ userId: newUser._id, role: 'Other' }); // Default role: Other
+//         await family.save();
+//       }
+
+//       // Send verification email
+//       await verificationmail(newUser, verificationCode);
+
+//       res.status(201).json({
+//         message: 'User registered successfully. Verification email sent.',
+//         userId: newUser._id, 
+//       });
+//     } catch (error) {
+//       console.error('Error during user registration:', error);
+//       res.status(500).json({ message: 'Server error. Please try again later.' });
+//     }
+//   },
+// ];
 
 const verifyUser = async (req, res) => {
   try {
@@ -165,6 +245,43 @@ const resendVerification = async (req, res) => {
     res.status(500).json({ message: 'Server error while resending verification code.' });
   }
 };
+
+// const resendVerification = async (req, res) => {
+//   try {
+//     const { email } = req.body;
+
+//     // Find the user by email
+//     const user = await userData.findOne({ email });
+//     if (!user) {
+//       return res.status(404).json({ message: 'User not found.' });
+//     }
+
+//     // Check if the user is already verified
+//     if (user.isVerified) {
+//       return res.status(400).json({ message: 'User is already verified.' });
+//     }
+
+//     // Generate a new verification code and expiration time
+//     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit code
+//     const expirationTime = new Date();
+//     expirationTime.setMinutes(expirationTime.getMinutes() + 30); // 30 minutes validity
+
+//     // Update user with new verification code and expiration time
+//     user.verificationCode = verificationCode;
+//     user.verificationCodeExpiration = expirationTime;
+//     await user.save();
+
+//     // Send verification email
+//     await resendVerificationMail(user, verificationCode);
+
+//     res.status(200).json({
+//       message: 'Verification code resent successfully. Please check your email.',
+//     });
+//   } catch (error) {
+//     console.error('Error resending verification code:', error);
+//     res.status(500).json({ message: 'Server error while resending verification code.' });
+//   }
+// };
   
 // Controller for user login
 
