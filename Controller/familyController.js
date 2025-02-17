@@ -98,10 +98,12 @@ const joinFamily = async (req, res) => {
       }
     } else if (familyCode) {
       family = await Family.findOne({ familyCode });
+
       if (!family) {
         return res.status(404).json({ error: 'Invalid family code.' });
       }
     }
+    // console.log(family.members);
 
     // Check if the user is already a member of the family
     const isMember = family.members.some(
@@ -216,19 +218,26 @@ const leaveFamilyGroup = async (req, res) => {
 const getFamilyById = async (req, res) => {
   try {
     const family = await Family.findById(req.params.id)
-      .populate('members.userId', 'firstName lastName username email') // Correct path for members
-      .populate('admins', 'firstName lastName username email');        // Correct path for admins
+      .populate({
+        path: "members.userId",
+        select: "firstName lastName username email onlineStatus lastSeen"
+      })
+      .populate({
+        path: "admins",
+        select: "firstName lastName username email onlineStatus lastSeen"
+      });
 
     if (!family) {
-      return res.status(404).json({ error: 'Family not found' });
+      return res.status(404).json({ error: "Family not found" }); 
     }
 
     res.status(200).json({ family });
   } catch (error) {
-    console.error('Error fetching family by ID:', error); // Log the actual error
-    res.status(500).json({ error: 'Server error' });
+    console.error("Error fetching family by ID:", error);
+    res.status(500).json({ error: "Server error" });
   }
 };
+
 const getAllFamilies = async (req, res) => {
   try {
     const families = await Family.find()

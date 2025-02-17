@@ -24,6 +24,7 @@
     "mongodb": "^6.6.1",
     "mongoose": "^8.9.3",
     "nodemailer": "^6.9.13",
+    "socket.io": "^4.8.1",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
   }
