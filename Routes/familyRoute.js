@@ -592,7 +592,7 @@ router.route('/:familyId/gallery')
  *       404:
  *         description: Family not found
  */
-router.route('/:familyId/profile-picture')
+router.route('/:familyId/profile')
   .put(protect, updateFamilyProfilePicture);
 
 module.exports = router;

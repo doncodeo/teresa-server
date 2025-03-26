@@ -444,11 +444,23 @@ const getFamilyMovies = asyncHandler(async (req, res) => {
 });
 
 const uploadToGallery = [
+  (req, res, next) => {
+    req.uploadFolder = `family_${req.params.familyId}/gallery`; // Set folder dynamically
+    next();
+  },
   upload.single('image'),
   async (req, res) => {
     try {
       const { familyId } = req.params;
-      const userId = req.user.id;
+      const userId = req.user.id; 
+
+      console.log('Gallery - File details:', {
+        originalname: req.file?.originalname,
+        mimetype: req.file?.mimetype,
+        size: req.file?.size,
+        path: req.file?.path, // Cloudinary URL
+        filename: req.file?.filename, // Cloudinary public ID
+      });
 
       const family = await Family.findById(familyId);
       if (!family) {
@@ -464,23 +476,9 @@ const uploadToGallery = [
         return res.status(400).json({ error: 'No image provided' });
       }
 
-      const result = await new Promise((resolve, reject) => {
-        cloudinary.uploader.upload_stream(
-          {
-            folder: `family_${familyId}/gallery`,
-            allowed_formats: ['jpg', 'png', 'jpeg'],
-            public_id: `image-${Date.now()}`,
-          },
-          (error, result) => {
-            if (error) reject(error);
-            else resolve(result);
-          }
-        ).end(req.file.buffer);
-      });
-
       const imageData = {
-        url: result.secure_url,
-        publicId: result.public_id,
+        url: req.file.path, // Cloudinary URL
+        publicId: req.file.filename, // Cloudinary public ID
         uploadedBy: userId,
       };
 
@@ -492,18 +490,30 @@ const uploadToGallery = [
         image: imageData,
       });
     } catch (error) {
-      console.error('Error uploading to gallery:', error);
+      console.error('Error uploading to gallery:', error.message || error);
       res.status(500).json({ error: 'Server error' });
     }
   },
 ];
 
 const updateFamilyProfilePicture = [
+  (req, res, next) => {
+    req.uploadFolder = `family_${req.params.familyId}/profile`; // Set folder dynamically
+    next();
+  },
   upload.single('profile'),
   async (req, res) => {
     try {
       const { familyId } = req.params;
       const userId = req.user.id;
+
+      console.log('Profile - File details:', {
+        originalname: req.file?.originalname,
+        mimetype: req.file?.mimetype,
+        size: req.file?.size,
+        path: req.file?.path,
+        filename: req.file?.filename,
+      });
 
       const family = await Family.findById(familyId);
       if (!family) {
@@ -519,27 +529,14 @@ const updateFamilyProfilePicture = [
         return res.status(400).json({ error: 'No image provided' });
       }
 
-      const result = await new Promise((resolve, reject) => {
-        cloudinary.uploader.upload_stream(
-          {
-            folder: `family_${familyId}/profile`,
-            allowed_formats: ['jpg', 'png', 'jpeg'],
-            public_id: `profilePicture-${Date.now()}`,
-          },
-          (error, result) => {
-            if (error) reject(error);
-            else resolve(result);
-          }
-        ).end(req.file.buffer);
-      });
-
+      // Delete old profile picture if it exists
       if (family.profilePicture && family.profilePicture.publicId) {
         await cloudinary.uploader.destroy(family.profilePicture.publicId);
       }
 
       const profilePictureData = {
-        url: result.secure_url,
-        publicId: result.public_id,
+        url: req.file.path,
+        publicId: req.file.filename,
       };
 
       family.profilePicture = profilePictureData;
@@ -550,11 +547,142 @@ const updateFamilyProfilePicture = [
         profilePicture: profilePictureData,
       });
     } catch (error) {
-      console.error('Error updating profile picture:', error);
+      console.error('Error updating profile picture:', error.message || error);
       res.status(500).json({ error: 'Server error' });
     }
   },
 ];
+
+
+
+
+
+
+
+
+
+
+
+// const uploadToGallery = [
+//   upload.single('image'),
+//   async (req, res) => {
+//     try {
+//       const { familyId } = req.params;
+//       const userId = req.user.id;
+
+//       console.log('Gallery - File details:', {
+//         originalname: req.file?.originalname,
+//         mimetype: req.file?.mimetype,
+//         size: req.file?.size,
+//         hasBuffer: !!req.file?.buffer, // True if buffer exists
+//         bufferSample: req.file?.buffer ? req.file.buffer.slice(0, 10).toString('hex') : 'no buffer', // First 10 bytes
+//       });
+
+//       const family = await Family.findById(familyId);
+//       if (!family) {
+//         return res.status(404).json({ error: 'Family not found' });
+//       }
+
+//       const isMember = family.members.some((member) => member.userId.toString() === userId);
+//       if (!isMember) {
+//         return res.status(403).json({ error: 'You are not a member of this family' });
+//       }
+
+//       if (!req.file) {
+//         return res.status(400).json({ error: 'No image provided' });
+//       }
+
+//       const result = await new Promise((resolve, reject) => {
+//         cloudinary.uploader.upload_stream(
+//           {
+//             folder: `family_${familyId}/gallery`,
+//             allowed_formats: ['jpg', 'png', 'jpeg'],
+//             public_id: `image-${Date.now()}`,
+//           },
+//           (error, result) => {
+//             if (error) reject(error);
+//             else resolve(result);
+//           }
+//         ).end(req.file.buffer);
+//       });
+
+//       const imageData = {
+//         url: result.secure_url,
+//         publicId: result.public_id,
+//         uploadedBy: userId,
+//       };
+
+//       family.gallery.push(imageData);
+//       await family.save();
+
+//       res.status(201).json({
+//         message: 'Image uploaded to gallery successfully',
+//         image: imageData,
+//       });
+//     } catch (error) {
+//       console.error('Error uploading to gallery:', error.message || error);
+//       res.status(500).json({ error: 'Server error' });
+//     }
+//   },
+// ];
+
+// const updateFamilyProfilePicture = [
+//   upload.single('profile'),
+//   async (req, res) => {
+//     try {
+//       const { familyId } = req.params;
+//       const userId = req.user.id;
+
+//       const family = await Family.findById(familyId);
+//       if (!family) {
+//         return res.status(404).json({ error: 'Family not found' });
+//       }
+
+//       const isAdmin = family.admins.some((admin) => admin.toString() === userId);
+//       if (!isAdmin) {
+//         return res.status(403).json({ error: 'Only admins can update the profile picture' });
+//       }
+
+//       if (!req.file) {
+//         return res.status(400).json({ error: 'No image provided' });
+//       }
+
+//       const result = await new Promise((resolve, reject) => {
+//         cloudinary.uploader.upload_stream(
+//           {
+//             folder: `family_${familyId}/profile`,
+//             allowed_formats: ['jpg', 'png', 'jpeg'],
+//             public_id: `profilePicture-${Date.now()}`,
+//           },
+//           (error, result) => {
+//             if (error) reject(error);
+//             else resolve(result);
+//           }
+//         ).end(req.file.buffer);
+//       });
+
+//       if (family.profilePicture && family.profilePicture.publicId) {
+//         await cloudinary.uploader.destroy(family.profilePicture.publicId);
+//       }
+
+//       const profilePictureData = {
+//         url: result.secure_url,
+//         publicId: result.public_id,
+//       };
+
+//       family.profilePicture = profilePictureData;
+//       await family.save();
+
+//       res.status(200).json({
+//         message: 'Profile picture updated successfully',
+//         profilePicture: profilePictureData,
+//       });
+//     } catch (error) {
+//       console.error('Error updating profile picture:', error);
+//       res.status(500).json({ error: 'Server error' });
+//     }
+//   },
+// ];
 
 module.exports = {
   createFamily,
