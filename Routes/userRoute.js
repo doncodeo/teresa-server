@@ -468,33 +468,3 @@ router.route('/:id').get(getUserById).put(updateUser).delete(deleteUser);
 router.route('/:id/location').get(protect, getUserLocation).put(protect, updateLocation);
 
 module.exports = router;
-
-
-
-
-
-
-
-// const express = require('express');
-// const router = express.Router();
-
-// const {
-//     registerUser,
-//     loginUser,
-//     updateUser,
-//     deleteUser,
-//     getAllUsers,
-//     getUserById,
-//     updateLocation,
-//     getUserLocation
-// } = require('../Controller/userController');
-// const {protect, adminOnly, superAdminOnly, errorHandler} = require('../Middleware/adminMiddleware');
-
-
-// router.route('/').get(getAllUsers).post(registerUser);
-// router.route('/login').post(loginUser);
-// router.route('/:id').get(getUserById).put(updateUser).delete(deleteUser);
-// router.route('/:id/location').get(protect, getUserLocation).put(protect, updateLocation);
-
- 
-// module.exports = router;

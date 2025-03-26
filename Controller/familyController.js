@@ -1,22 +1,22 @@
 const { body, validationResult } = require('express-validator');
 const Family = require('../Models/familyModel');
-const asyncHandler = require ('express-async-handler'); 
-const {familyCreationMail, familyWelcomeMail, familyLeaveMail} = require('../Middleware/emailServices');
+const asyncHandler = require('express-async-handler');
+const { familyCreationMail, familyWelcomeMail, familyLeaveMail } = require('../Middleware/emailServices');
 const userData = require('../Models/userModel');
+const upload = require('../config/multerConfig');
+const cloudinary = require('../config/cloudinaryConfig');
 
 const validRoles = [
-  'Father', 'Mother', 'Son', 'Daughter', 
-  'Cousin', 'Uncle', 'Aunt', 
-  'Grandparent', 'Sibling', 'Other'
+  'Father', 'Mother', 'Son', 'Daughter',
+  'Cousin', 'Uncle', 'Aunt',
+  'Grandparent', 'Sibling', 'Other',
 ];
 
 const validateRole = (role) => validRoles.includes(role);
 
-// Create a Family Group
 const createFamily = [
   body('name').notEmpty().withMessage('Family name is required'),
   body('description').notEmpty().withMessage('Family description is required'),
-
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -25,28 +25,22 @@ const createFamily = [
 
     try {
       const { name, description } = req.body;
-      const createdBy = req.user.id; // Ensure `req.user` is populated
+      const createdBy = req.user.id;
 
-      // Fetch user details
       const user = await userData.findById(createdBy);
       if (!user) {
         return res.status(404).json({ error: 'User not found.' });
       }
 
-      // Check if the user is verified
       if (!user.isVerified) {
-        return res.status(403).json({
-          error: 'You must verify your account before creating a family.',
-        });
+        return res.status(403).json({ error: 'You must verify your account before creating a family.' });
       }
 
-      // Check if the family name already exists
       const existingFamily = await Family.findOne({ name });
       if (existingFamily) {
         return res.status(400).json({ error: 'Family name already exists.' });
       }
 
-      // Create the family and add the creator as an admin
       const family = new Family({
         name,
         description,
@@ -56,14 +50,10 @@ const createFamily = [
       });
       await family.save();
 
-      // Update the user's familyIds (push the new family ID)
       user.familyIds.push(family._id);
       await user.save();
 
-      // Generate a join link
       const joinLink = `${process.env.FRONTEND_URL}/join-family/${family.joinToken}`;
-
-      // Send the email with the join link
       await familyWelcomeMail(req.user, family, joinLink);
 
       res.status(201).json({
@@ -79,18 +69,14 @@ const createFamily = [
 
 const joinFamily = async (req, res) => {
   try {
-    const { token, familyCode, role } = req.body; // Accept token, familyCode, and role
-    const userId = req.user.id; // User attempting to join
+    const { token, familyCode, role } = req.body;
+    const userId = req.user.id;
 
     if (!token && !familyCode) {
-      return res.status(400).json({
-        error: 'Either a join token or a family code must be provided.',
-      });
+      return res.status(400).json({ error: 'Either a join token or a family code must be provided.' });
     }
 
     let family;
-
-    // Find the family by the provided token or family code
     if (token) {
       family = await Family.findOne({ joinToken: token });
       if (!family) {
@@ -98,50 +84,31 @@ const joinFamily = async (req, res) => {
       }
     } else if (familyCode) {
       family = await Family.findOne({ familyCode });
-
       if (!family) {
         return res.status(404).json({ error: 'Invalid family code.' });
       }
     }
-    // console.log(family.members);
 
-    // Check if the user is already a member of the family
-    const isMember = family.members.some(
-      (member) => member.userId.toString() === userId
-    );
+    const isMember = family.members.some((member) => member.userId.toString() === userId);
     if (isMember) {
-      return res.status(400).json({
-        error: 'User is already a member of this family.',
-      });
+      return res.status(400).json({ error: 'User is already a member of this family.' });
     }
 
-    // Fetch user details
     const user = await userData.findById(userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
     }
 
-    // Add the user to the family with the provided or default role
-    family.members.push({
-      userId,
-      role: role || 'Other', // Default to 'Other' if no role is provided
-    });
+    family.members.push({ userId, role: role || 'Other' });
     await family.save();
 
-    // Update the user's familyIds (push the new family ID)
     user.familyIds.push(family._id);
     await user.save();
 
-    // Generate the family group link
     const familyLink = `${process.env.FRONTEND_URL}/family/${family._id}`;
-
-    // Send welcome email
     await familyWelcomeMail(user, family, familyLink);
 
-    res.status(200).json({
-      message: 'Successfully joined the family group.',
-      family,
-    });
+    res.status(200).json({ message: 'Successfully joined the family group.', family });
   } catch (error) {
     console.error('Error joining family:', error);
     res.status(500).json({ error: 'Server error' });
@@ -150,108 +117,79 @@ const joinFamily = async (req, res) => {
 
 const leaveFamilyGroup = async (req, res) => {
   try {
-    const { familyId } = req.params; // Family group ID
-    const userId = req.user.id; // Extracted from the authenticated user
+    const { familyId } = req.params;
+    const userId = req.user.id;
 
-    // Find the family by ID
     const family = await Family.findById(familyId);
     if (!family) {
       return res.status(404).json({ error: 'Family group not found.' });
     }
 
-    // Check if the user is a member of the family
-    const memberIndex = family.members.findIndex(
-      (member) => member.userId.toString() === userId
-    );
+    const memberIndex = family.members.findIndex((member) => member.userId.toString() === userId);
     if (memberIndex === -1) {
       return res.status(400).json({ error: 'You are not a member of this family group.' });
     }
 
-    // Fetch user details
     const user = await userData.findById(userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
     }
 
-    // Check if the user is an admin
     const isAdmin = family.admins.some((adminId) => adminId.toString() === userId);
-
     if (isAdmin) {
-      // Ensure there is at least one other admin in the group
       if (family.admins.length === 1) {
-        return res.status(400).json({
-          error: 'You cannot leave the family group as an admin unless there is another admin in the group.',
-        });
+        return res.status(400).json({ error: 'You cannot leave the family group as an admin unless there is another admin.' });
       }
-
-      // Remove the user from the admins list
       family.admins = family.admins.filter((adminId) => adminId.toString() !== userId);
     }
 
-    // Remove the user from the members list
-    family.members = family.members.filter(
-      (member) => member.userId.toString() !== userId
-    );
-
+    family.members = family.members.filter((member) => member.userId.toString() !== userId);
     await family.save();
 
-    // Remove the `familyId` from the user's familyIds array
-    user.familyIds = user.familyIds.filter(
-      (id) => id.toString() !== familyId
-    );
+    user.familyIds = user.familyIds.filter((id) => id.toString() !== familyId);
     await user.save();
 
-    // Prepare the family code and family link
     const familyCode = family.familyCode;
     const familyLink = `${process.env.FRONTEND_URL}/join-family/${family.joinToken}`;
-
-    // Send the leave email with the family code and link
     await familyLeaveMail(user, family, familyLink, familyCode);
 
     res.status(200).json({ message: 'You have successfully left the family group.' });
   } catch (error) {
     console.error('Error leaving family group:', error);
-    res.status(500).json({ error: 'Server error.' });
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
 const getFamilyById = async (req, res) => {
   try {
     const family = await Family.findById(req.params.id)
-      .populate({
-        path: "members.userId",
-        select: "firstName lastName username email onlineStatus lastSeen"
-      })
-      .populate({
-        path: "admins",
-        select: "firstName lastName username email onlineStatus lastSeen"
-      });
+      .populate({ path: 'members.userId', select: 'firstName lastName username email onlineStatus lastSeen' })
+      .populate({ path: 'admins', select: 'firstName lastName username email onlineStatus lastSeen' });
 
     if (!family) {
-      return res.status(404).json({ error: "Family not found" }); 
+      return res.status(404).json({ error: 'Family not found' });
     }
 
     res.status(200).json({ family });
   } catch (error) {
-    console.error("Error fetching family by ID:", error);
-    res.status(500).json({ error: "Server error" });
+    console.error('Error fetching family by ID:', error);
+    res.status(500).json({ error: 'Server error' });
   }
 };
 
 const getAllFamilies = async (req, res) => {
   try {
     const families = await Family.find()
-      .populate('members.userId', 'firstName lastName username email') // Populate members' details
-      .populate('admins', 'firstName lastName username email');        // Populate admins' details
+      .populate('members.userId', 'firstName lastName username email')
+      .populate('admins', 'firstName lastName username email');
 
     res.status(200).json({ families });
   } catch (error) {
-    console.error('Error fetching families:', error); // Log detailed error
+    console.error('Error fetching families:', error);
     res.status(500).json({ error: 'Server error' });
   }
-}; 
- 
-// Update a Family Group
+};
+
 const updateFamily = async (req, res) => {
   try {
     const { id } = req.params;
@@ -274,27 +212,24 @@ const updateFamily = async (req, res) => {
 
 const updateOwnRole = async (req, res) => {
   try {
-    const { newRole } = req.body; // Only the role is needed in the body
-    const { familyId } = req.params; // Retrieve familyId from URL params
-    const userId = req.user.id; // Assumes user ID is set by authentication middleware
+    const { newRole } = req.body;
+    const { familyId } = req.params;
+    const userId = req.user.id;
 
     if (!validateRole(newRole)) {
       return res.status(400).json({ error: 'Invalid role provided.' });
     }
 
-    // Find the family
     const family = await Family.findById(familyId);
     if (!family) {
       return res.status(404).json({ error: 'Family not found.' });
     }
 
-    // Check if the user is a member of the family
     const member = family.members.find((member) => member.userId.toString() === userId);
     if (!member) {
       return res.status(403).json({ error: 'You are not a member of this family.' });
     }
 
-    // Update the user's role
     member.role = newRole;
     await family.save();
 
@@ -307,33 +242,29 @@ const updateOwnRole = async (req, res) => {
 
 const updateMemberRole = async (req, res) => {
   try {
-    const { memberId, newRole } = req.body; 
+    const { memberId, newRole } = req.body;
     const { familyId } = req.params;
-    const userId = req.user.id; 
+    const userId = req.user.id;
 
     if (!validateRole(newRole)) {
       return res.status(400).json({ error: 'Invalid role provided.' });
     }
 
-    // Find the family
     const family = await Family.findById(familyId);
     if (!family) {
       return res.status(404).json({ error: 'Family not found.' });
     }
 
-    // Check if the user is an admin of the family
     const isAdmin = family.admins.some((admin) => admin.toString() === userId);
     if (!isAdmin) {
       return res.status(403).json({ error: 'Only admins can update roles of other members.' });
     }
 
-    // Find the member to update
     const member = family.members.find((member) => member.userId.toString() === memberId);
     if (!member) {
       return res.status(404).json({ error: 'Member not found in this family.' });
     }
 
-    // Update the member's role
     member.role = newRole;
     await family.save();
 
@@ -343,7 +274,7 @@ const updateMemberRole = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
-// Delete a Family Group
+
 const deleteFamily = async (req, res) => {
   try {
     const family = await Family.findByIdAndDelete(req.params.id);
@@ -356,7 +287,6 @@ const deleteFamily = async (req, res) => {
   }
 };
 
-// Add a Member to a Family Group
 const addMember = [
   async (req, res) => {
     try {
@@ -367,48 +297,46 @@ const addMember = [
         return res.status(404).json({ error: 'Family not found' });
       }
 
-      const memberExists = family.members.some(member => member.user.toString() === userId);
+      const memberExists = family.members.some((member) => member.userId.toString() === userId);
       if (memberExists) {
         return res.status(400).json({ error: 'User is already a member of this family' });
       }
 
-      family.members.push({ user: userId, role });
+      family.members.push({ userId, role });
       await family.save();
 
       res.status(200).json({ family });
     } catch (error) {
       res.status(500).json({ error: 'Server error' });
     }
-  }
+  },
 ];
 
-// Remove a Member from a Family Group
 const removeMember = [
-    async (req, res) => {
-      try {
-        const { familyId, userId } = req.body;
-  
-        const family = await Family.findById(familyId);
-        if (!family) {
-          return res.status(404).json({ error: 'Family not found' });
-        }
-  
-        const memberIndex = family.members.findIndex(member => member.user.toString() === userId);
-        if (memberIndex === -1) {
-          return res.status(400).json({ error: 'User is not a member of this family' });
-        }
-  
-        family.members.splice(memberIndex, 1);
-        await family.save();
-  
-        res.status(200).json({ family });
-      } catch (error) {
-        res.status(500).json({ error: 'Server error' });
+  async (req, res) => {
+    try {
+      const { familyId, userId } = req.body;
+
+      const family = await Family.findById(familyId);
+      if (!family) {
+        return res.status(404).json({ error: 'Family not found' });
       }
+
+      const memberIndex = family.members.findIndex((member) => member.userId.toString() === userId);
+      if (memberIndex === -1) {
+        return res.status(400).json({ error: 'User is not a member of this family' });
+      }
+
+      family.members.splice(memberIndex, 1);
+      await family.save();
+
+      res.status(200).json({ family });
+    } catch (error) {
+      res.status(500).json({ error: 'Server error' });
     }
-  ];
-  
-// Add an Admin to a Family Group
+  },
+];
+
 const addAdmin = async (req, res) => {
   try {
     const { familyId, userId } = req.body;
@@ -418,7 +346,7 @@ const addAdmin = async (req, res) => {
       return res.status(404).json({ error: 'Family not found' });
     }
 
-    const adminExists = family.admins.some(admin => admin.toString() === userId);
+    const adminExists = family.admins.some((admin) => admin.toString() === userId);
     if (adminExists) {
       return res.status(400).json({ error: 'User is already an admin' });
     }
@@ -432,7 +360,6 @@ const addAdmin = async (req, res) => {
   }
 };
 
-// Remove an Admin from a Family Group
 const removeAdmin = async (req, res) => {
   try {
     const { familyId, userId } = req.body;
@@ -442,7 +369,7 @@ const removeAdmin = async (req, res) => {
       return res.status(404).json({ error: 'Family not found' });
     }
 
-    const adminIndex = family.admins.findIndex(admin => admin.toString() === userId);
+    const adminIndex = family.admins.findIndex((admin) => admin.toString() === userId);
     if (adminIndex === -1) {
       return res.status(400).json({ error: 'User is not an admin' });
     }
@@ -458,50 +385,38 @@ const removeAdmin = async (req, res) => {
 
 const getFamilyMembersLocation = async (req, res) => {
   try {
-    const { familyId } = req.params; // Get the family ID from the request parameters
+    const { familyId } = req.params;
 
-    // Fetch the family by its ID, including members
     const family = await Family.findById(familyId).populate('members.userId', 'firstName lastName profilePicture location');
-
     if (!family || !family.members.length) {
       return res.status(404).json({ message: 'No family members found' });
     }
 
-    // Create an array of members with their location data
-    const membersWithLocation = family.members.map(member => ({
+    const membersWithLocation = family.members.map((member) => ({
       userId: member.userId._id,
       firstName: member.userId.firstName,
       lastName: member.userId.lastName,
-      location: member.userId.location
-    })); 
+      location: member.userId.location,
+    }));
 
-    // Return the family members with their locations
     res.status(200).json({ members: membersWithLocation });
   } catch (error) {
     console.error('Error fetching family members:', error);
     res.status(500).json({ error: 'Server error' });
   }
-}; 
+};
 
-// Add movie to Family 
 const addMovieToFamily = asyncHandler(async (req, res) => {
   const { familyCode, title, description, link } = req.body;
-  const userId = req.user._id; // Assumes authentication middleware adds `req.user`
+  const userId = req.user._id;
 
   try {
     const family = await Family.findOne({ familyCode });
-
     if (!family) {
       return res.status(404).json({ error: 'Family not found' });
     }
 
-    const newMovie = {
-      title,
-      description,
-      link,
-      addedBy: userId,
-    };
-
+    const newMovie = { title, description, link, addedBy: userId };
     family.movies.push(newMovie);
     await family.save();
 
@@ -517,7 +432,6 @@ const getFamilyMovies = asyncHandler(async (req, res) => {
 
   try {
     const family = await Family.findOne({ familyCode }).populate('movies.addedBy', 'username email');
-
     if (!family) {
       return res.status(404).json({ error: 'Family not found' });
     }
@@ -529,8 +443,119 @@ const getFamilyMovies = asyncHandler(async (req, res) => {
   }
 });
 
+const uploadToGallery = [
+  upload.single('image'),
+  async (req, res) => {
+    try {
+      const { familyId } = req.params;
+      const userId = req.user.id;
 
- 
+      const family = await Family.findById(familyId);
+      if (!family) {
+        return res.status(404).json({ error: 'Family not found' });
+      }
+
+      const isMember = family.members.some((member) => member.userId.toString() === userId);
+      if (!isMember) {
+        return res.status(403).json({ error: 'You are not a member of this family' });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ error: 'No image provided' });
+      }
+
+      const result = await new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_stream(
+          {
+            folder: `family_${familyId}/gallery`,
+            allowed_formats: ['jpg', 'png', 'jpeg'],
+            public_id: `image-${Date.now()}`,
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        ).end(req.file.buffer);
+      });
+
+      const imageData = {
+        url: result.secure_url,
+        publicId: result.public_id,
+        uploadedBy: userId,
+      };
+
+      family.gallery.push(imageData);
+      await family.save();
+
+      res.status(201).json({
+        message: 'Image uploaded to gallery successfully',
+        image: imageData,
+      });
+    } catch (error) {
+      console.error('Error uploading to gallery:', error);
+      res.status(500).json({ error: 'Server error' });
+    }
+  },
+];
+
+const updateFamilyProfilePicture = [
+  upload.single('profile'),
+  async (req, res) => {
+    try {
+      const { familyId } = req.params;
+      const userId = req.user.id;
+
+      const family = await Family.findById(familyId);
+      if (!family) {
+        return res.status(404).json({ error: 'Family not found' });
+      }
+
+      const isAdmin = family.admins.some((admin) => admin.toString() === userId);
+      if (!isAdmin) {
+        return res.status(403).json({ error: 'Only admins can update the profile picture' });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ error: 'No image provided' });
+      }
+
+      const result = await new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_stream(
+          {
+            folder: `family_${familyId}/profile`,
+            allowed_formats: ['jpg', 'png', 'jpeg'],
+            public_id: `profilePicture-${Date.now()}`,
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        ).end(req.file.buffer);
+      });
+
+      if (family.profilePicture && family.profilePicture.publicId) {
+        await cloudinary.uploader.destroy(family.profilePicture.publicId);
+      }
+
+      const profilePictureData = {
+        url: result.secure_url,
+        publicId: result.public_id,
+      };
+
+      family.profilePicture = profilePictureData;
+      await family.save();
+
+      res.status(200).json({
+        message: 'Profile picture updated successfully',
+        profilePicture: profilePictureData,
+      });
+    } catch (error) {
+      console.error('Error updating profile picture:', error);
+      res.status(500).json({ error: 'Server error' });
+    }
+  },
+];
+
 module.exports = {
   createFamily,
   joinFamily,
@@ -547,5 +572,7 @@ module.exports = {
   removeAdmin,
   getFamilyMembersLocation,
   addMovieToFamily,
-  getFamilyMovies,  
+  getFamilyMovies,
+  uploadToGallery,
+  updateFamilyProfilePicture,
 };
